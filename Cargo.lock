@@ -4530,6 +4530,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "move-symbol-pool"
+version = "0.1.0"
+source = "git+https://github.com/move-language/move?rev=e1e647b73dbd3652aabb2020728a4a517c26e28e#e1e647b73dbd3652aabb2020728a4a517c26e28e"
+dependencies = [
+ "once_cell",
+ "serde 1.0.147",
+]
+
+[[package]]
 name = "move-table-extension"
 version = "0.1.0"
 source = "git+https://github.com/move-language/move?rev=be52c7118aeb94fbbfa12590e420a75e8ddfec93#be52c7118aeb94fbbfa12590e420a75e8ddfec93"
@@ -7959,7 +7968,7 @@ dependencies = [
  "serde_with",
  "shell-words",
  "signature",
- "sui-bytecode-src-verify",
+ "sui-bytecode-src-verifier",
  "sui-config",
  "sui-core",
  "sui-framework",
@@ -8064,7 +8073,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "sui-bytecode-src-verify"
+name = "sui-bytecode-src-verifier"
 version = "0.1.0"
 dependencies = [
  "anyhow",
