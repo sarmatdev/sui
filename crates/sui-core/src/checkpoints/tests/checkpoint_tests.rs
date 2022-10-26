@@ -915,6 +915,7 @@ async fn checkpoint_integration() {
 
 // Now check the connection between state / bacth and checkpoint mechanism
 
+#[ignore]
 #[sim_test]
 async fn test_batch_to_checkpointing() {
     // Create an authority
