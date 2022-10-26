@@ -10,6 +10,7 @@ use fastcrypto::{
     traits::ToFromBytes,
     Verifier,
 };
+use fastcrypto_zkp::{verifier::{PreparedVerifyingKey, verify_with_processed_vk, Proof}, conversions::{bls_g1_affine_from_zcash_bytes, bls_g2_affine_from_zcash_bytes, BlsFr}};
 use move_binary_format::errors::PartialVMResult;
 use move_vm_runtime::native_functions::NativeContext;
 use move_vm_types::{
@@ -33,7 +34,8 @@ pub const INVALID_PUBKEY: u64 = 6;
 /// Using the word "sui" for nothing-up-my-sleeve number guarantees.
 pub const BP_DOMAIN: &[u8] = b"sui";
 
-/// Native implementation of ecrecover in public Move API, see crypto.move for specifications.
+/// Native implementation of ecrecover in public Mo
+/// ve API, see crypto.move for specifications.
 pub fn ecrecover(
     _context: &mut NativeContext,
     ty_args: Vec<Type>,
@@ -404,6 +406,55 @@ pub fn ed25519_verify(
     };
 
     match public_key.verify(&msg_ref, &signature) {
+        Ok(_) => Ok(NativeResult::ok(cost, smallvec![Value::bool(true)])),
+        Err(_) => Ok(NativeResult::ok(cost, smallvec![Value::bool(false)])),
+    }
+}
+
+/// Native implemention of ed25519_verify in public Move API, see crypto.move for specifications.
+pub fn verify_groth16_proof(
+    _context: &mut NativeContext,
+    ty_args: Vec<Type>,
+    mut args: VecDeque<Value>,
+) -> PartialVMResult<NativeResult> {
+    debug_assert!(ty_args.is_empty());
+    debug_assert!(args.len() == 3);
+
+    let vk_gamma_abc_g1 = pop_arg!(args, VectorRef);
+    let vk_gamma_abc_g1_ref: Vec<Vec<u8>> = vk_gamma_abc_g1.into();
+    
+    let alpha_g1_beta_g2 = pop_arg!(args, VectorRef);
+    let alpha_g1_beta_g2_ref = alpha_g1_beta_g2.as_bytes_ref();
+    
+    let gamma_g2_neg_pc = pop_arg!(args, VectorRef);
+    let gamma_g2_neg_pc_ref = gamma_g2_neg_pc.as_bytes_ref();
+
+    let delta_g2_neg_pc = pop_arg!(args, VectorRef);
+    let delta_g2_neg_pc_ref = delta_g2_neg_pc.as_bytes_ref();
+
+    let pvk = PreparedVerifyingKey {
+        vk_gamma_abc_g1: vk_gamma_abc_g1_ref,
+        alpha_g1_beta_g2: alpha_g1_beta_g2_ref.to_vec(),
+        gamma_g2_neg_pc: gamma_g2_neg_pc_ref.to_vec(),
+        delta_g2_neg_pc: delta_g2_neg_pc_ref.to_vec(),
+    };
+
+    let x_bytes = pop_arg!(args, VectorRef);
+    let x = BlsFr::from_le_bytes_mod_order(x.as_bytes_ref().as_slice());
+    
+    let a = pop_arg!(args, VectorRef);
+    let b = pop_arg!(args, VectorRef);
+    let c = pop_arg!(args, VectorRef);
+    
+    let proof = Proof {
+        a: bls_g1_affine_from_zcash_bytes(&a.as_bytes_ref()),
+        b: bls_g2_affine_from_zcash_bytes(b.as_bytes_ref()),
+        c: bls_g1_affine_from_zcash_bytes(c.as_bytes_ref()),
+    };
+
+    let cost = legacy_empty_cost();
+
+    match verify_with_processed_vk(pvk, x, proof) {
         Ok(_) => Ok(NativeResult::ok(cost, smallvec![Value::bool(true)])),
         Err(_) => Ok(NativeResult::ok(cost, smallvec![Value::bool(false)])),
     }
