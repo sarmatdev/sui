@@ -27,7 +27,7 @@ use tracing::info;
 
 use crate::config::{Config, PersistedConfig, SuiClientConfig};
 use sui_framework::build_move_package;
-use sui_framework_build::compiled_package::BuildConfig;
+use sui_framework_build::compiled_package::{BuildConfig, CompiledPackage};
 use sui_json::SuiJsonValue;
 use sui_json_rpc_types::{
     GetObjectDataResponse, SuiObjectInfo, SuiParsedObject, SuiTransactionResponse,
@@ -414,8 +414,6 @@ impl SuiClientCommands {
                         print_diags_to_stderr: true,
                     },
                 )?;
-
-                let compiled_modules = compiled_package.get_package_bytes();
 
                 // verify that all dependency packages have the correct on-chain bytecode
                 let mut verifier = BytecodeSourceVerifier::new(context.client.read_api(), false);
