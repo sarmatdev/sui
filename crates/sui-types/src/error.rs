@@ -128,9 +128,10 @@ pub enum SuiError {
         errors.iter().map(| e | ToString::to_string(&e)).collect::<Vec<String>>()
     )]
     QuorumFailedToProcessTransaction {
+        good_stake: StakeUnit,
         errors: Vec<SuiError>,
         conflicting_tx_digests:
-            BTreeMap<ObjectRef, BTreeMap<TransactionDigest, (Vec<AuthorityName>, StakeUnit)>>,
+            BTreeMap<TransactionDigest, (Vec<(AuthorityName, ObjectRef)>, StakeUnit)>,
     },
     #[error(
     "Failed to execute certificate on a quorum of validators. Validator errors: {:#?}",

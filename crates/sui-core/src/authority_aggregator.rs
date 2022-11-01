@@ -1619,7 +1619,7 @@ where
             bad_stake: StakeUnit,
             // If there are conflicting transactions, we note them down and may attempt to retry
             conflicting_tx_digests:
-                BTreeMap<ObjectRef, BTreeMap<TransactionDigest, (Vec<AuthorityName>, StakeUnit)>>,
+                BTreeMap<TransactionDigest, (Vec<(AuthorityName, ObjectRef)>, StakeUnit)>,
         }
 
         let state = ProcessTransactionState::default();
@@ -1708,14 +1708,19 @@ where
                                     obj_ref,
                                     pending_transaction,
                                 } = err {
-                                    let conflicting_txes_for_obj_ref = state.conflicting_tx_digests
-                                        .entry(obj_ref)
-                                        .or_insert(BTreeMap::new());
-                                    let (names, stake) = conflicting_txes_for_obj_ref
+                                    let (lock_records, total_stake) = state.conflicting_tx_digests
                                         .entry(pending_transaction)
                                         .or_insert((Vec::new(), 0));
-                                    names.push(name);
-                                    *stake += weight;
+                                    lock_records.push((name, obj_ref));
+                                    *total_stake += weight;
+                                    // let conflicting_txes_for_obj_ref = state.conflicting_tx_digests
+                                    //     .entry(obj_ref)
+                                    //     .or_insert(BTreeMap::new());
+                                    // let (names, stake) = conflicting_txes_for_obj_ref
+                                    //     .entry(pending_transaction)
+                                    //     .or_insert((Vec::new(), 0));
+                                    // names.push(name);
+                                    // *stake += weight;
                                 }
 
                                 // Append to the list of errors
@@ -1773,6 +1778,7 @@ where
 
                             let unique_errors: HashSet<_> = state.errors.into_iter().collect();
                             return Err(SuiError::QuorumFailedToProcessTransaction {
+                                good_stake: state.good_stake,
                                 errors: unique_errors.into_iter().collect(),
                                 conflicting_tx_digests: state.conflicting_tx_digests,
                             });
@@ -1808,6 +1814,7 @@ where
         state
             .certificate
             .ok_or(SuiError::QuorumFailedToProcessTransaction {
+                good_stake: state.good_stake,
                 errors: state.errors,
                 conflicting_tx_digests: state.conflicting_tx_digests,
             })

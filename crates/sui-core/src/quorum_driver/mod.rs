@@ -199,18 +199,20 @@ where
 
         match &result {
             Err(SuiError::QuorumFailedToProcessTransaction {
+                good_stake,
                 errors: _errors,
                 conflicting_tx_digests,
             }) if !conflicting_tx_digests.is_empty() => {
                 // TODO metrics
                 debug!(
                     ?tx_digest,
-                    "Attempting to retry {} conflicting transactions: {:?}",
+                    ?good_stake,
+                    "Observed {} conflicting transactions: {:?}",
                     conflicting_tx_digests.len(),
                     conflicting_tx_digests
                 );
                 let _ = self
-                    .attempt_conflicting_transactions(conflicting_tx_digests)
+                    .attempt_conflicting_transactions_maybe(*good_stake, conflicting_tx_digests)
                     .await;
             }
             _ => (),
@@ -246,59 +248,54 @@ where
     }
 
     // TODO currently this function is not epoch-boundary-safe. We need to make it so.
-    async fn attempt_conflicting_transactions(
+    async fn attempt_conflicting_transactions_maybe(
         &self,
+        good_stake: StakeUnit,
         conflicting_tx_digests: &BTreeMap<
-            ObjectRef,
-            BTreeMap<TransactionDigest, (Vec<AuthorityName>, StakeUnit)>,
+            TransactionDigest,
+            (Vec<(AuthorityName, ObjectRef)>, StakeUnit),
         >,
     ) -> SuiResult<()> {
         let validity = self.validators.load().committee.validity_threshold();
-
-        let mut futs = Vec::new();
-        for (obj_ref, tx_digests) in conflicting_tx_digests {
-            futs.push(self.attempt_one_conflicting_transaction(obj_ref, tx_digests, validity));
+        // if we have >= f+1 good stake on the current transaction, no point in retrying conflicting ones
+        if good_stake >= validity {
+            return Ok(());
         }
 
-        futures::future::join_all(futs).await;
+        let mut conflicting_tx_digests = Vec::from_iter(conflicting_tx_digests.iter());
+        conflicting_tx_digests.sort_by(|lhs, rhs| rhs.1 .1.cmp(&lhs.1 .1));
+        if conflicting_tx_digests.is_empty() {
+            // TODO shouldn't happen , log error
+            return Ok(());
+        }
+
+        // we checked emptiness above, safe to unwrap.
+        let (tx_digest, (validators, total_stake)) = conflicting_tx_digests.get(0).unwrap();
+
+        // To be more conservative and try not to actually cause full equivocation,
+        // we only retry a transaction when at least f+1 validators claims it locks an object.
+        if *total_stake < validity {
+            return Ok(());
+        }
+        info!(?tx_digest, ?total_stake, "retrying conflicting tx.");
+        let _ = self
+            .attempt_one_conflicting_transaction(
+                tx_digest,
+                validators
+                    .iter()
+                    .map(|(name, _obj_ref)| name)
+                    .collect::<Vec<_>>(),
+            )
+            .await;
+
         Ok(())
     }
 
     async fn attempt_one_conflicting_transaction(
         &self,
-        obj_ref: &ObjectRef,
-        conflicting_tx_digests: &BTreeMap<TransactionDigest, (Vec<AuthorityName>, StakeUnit)>,
-        validity: u64,
+        tx_digest: &&TransactionDigest,
+        validators: Vec<&AuthorityName>,
     ) -> SuiResult<()> {
-        if conflicting_tx_digests.is_empty() {
-            // TODO log error
-            return Ok(());
-        }
-        let mut conflicting_tx_digests = Vec::from_iter(conflicting_tx_digests.iter());
-        // sort by weights
-        conflicting_tx_digests.sort_by(|lhs, rhs| rhs.1 .1.cmp(&lhs.1 .1));
-
-        // we checked emptiness above, safe to unwrap.
-        let (tx_digest, (validators, total_stake)) = conflicting_tx_digests.get(0).unwrap();
-        if let Some((tx_digest_2, (validators_2, total_stake_2))) = conflicting_tx_digests.get(1) {
-            // If the 2nd digest's total stake also surpasses f+1, the object is fully equivocated.
-            if *total_stake_2 >= validity {
-                // TODO add metric here
-                info!(
-                    ?obj_ref,
-                    tx_digest_1=?tx_digest,
-                    validators_1=?validators,
-                    total_stake_1=?total_stake,
-                    tx_digest_2=?tx_digest_2,
-                    validators_2=?validators_2,
-                    total_stake_2=?total_stake_2,
-                    "Object is now fully equivocated on validators"
-                );
-                return Ok(());
-            }
-        }
-
-        // Now, we optimistically assume the object is not fully equivocated yet, and try to execute the tx.
         let clients = self.validators.load();
         for validator_name in validators {
             // If we cannot find the client, it indicates an epoch change. Then we stop all attempts.
@@ -341,7 +338,7 @@ where
         }
         // if we reach here, it means none of the validators gives us the transaction.
         // TODO metrics
-        warn!(?obj_ref, "No one validator gives us the transaction info. They either just experienced an epoch change, or are byzantine.");
+        warn!(?tx_digest, "No one validator gives us the transaction info. They either just experienced an epoch change, or are byzantine.");
         Ok(())
     }
 }
