@@ -32,8 +32,9 @@ use tokio::{
 use types::{
     BatchDigest, Certificate, CertificateDigest, ConsensusStore, FetchCertificatesRequest,
     FetchCertificatesResponse, GetCertificatesRequest, GetCertificatesResponse, Header,
-    HeaderDigest, Metadata, PayloadAvailabilityRequest, PayloadAvailabilityResponse,
-    PrimaryMessage, PrimaryToPrimary, PrimaryToPrimaryServer, ReconfigureNotification, Round,
+    HeaderDigest, LatestHeaderRequest, LatestHeaderResponse, Metadata, PayloadAvailabilityRequest,
+    PayloadAvailabilityResponse, PrimaryMessage, PrimaryToPrimary, PrimaryToPrimary,
+    PrimaryToPrimaryServer, PrimaryToPrimaryServer, ReconfigureNotification, Round,
 };
 
 struct FetchCertificateProxy {
@@ -70,10 +71,18 @@ impl PrimaryToPrimary for FetchCertificateProxy {
             self.response.lock().await.recv().await.unwrap(),
         ))
     }
+
     async fn get_payload_availability(
         &self,
         _request: anemo::Request<PayloadAvailabilityRequest>,
     ) -> Result<anemo::Response<PayloadAvailabilityResponse>, anemo::rpc::Status> {
+        unimplemented!()
+    }
+
+    async fn get_latest_header(
+        &self,
+        _request: anemo::Request<LatestHeaderRequest>,
+    ) -> Result<anemo::Response<LatestHeaderResponse>, anemo::rpc::Status> {
         unimplemented!()
     }
 }
