@@ -1726,7 +1726,7 @@ where
                                     );
                                 }
                                 state.errors.push(
-                                    SuiError::UnexectedResultFromValidatorHandleTransaction {
+                                    SuiError::UnexpectedResultFromValidatorHandleTransaction {
                                         err: format!("{:?}", ret),
                                     },
                                 );
@@ -1735,30 +1735,13 @@ where
                         };
 
                         if state.bad_stake > validity {
-                            // Too many errors
-                            debug!(
-                                tx_digest = ?tx_digest,
-                                num_errors = state.errors.len(),
-                                bad_stake = state.bad_stake,
-                                "Too many errors from validators handle_transaction, validity threshold exceeded. Errors={:?}",
-                                state.errors
-                            );
                             self.metrics
                                 .num_signatures
                                 .observe(state.signatures.len() as f64);
                             self.metrics.num_good_stake.observe(state.good_stake as f64);
                             self.metrics.num_bad_stake.observe(state.bad_stake as f64);
 
-                            let unique_errors: HashSet<_> = state.errors.into_iter().collect();
-                            // If no authority succeeded and all authorities returned the same error,
-                            // return that error.
-                            if unique_errors.len() == 1 && state.good_stake == 0 {
-                                return Err(unique_errors.into_iter().next().unwrap());
-                            } else {
-                                return Err(SuiError::QuorumNotReached {
-                                    errors: unique_errors.into_iter().collect(),
-                                });
-                            }
+                            return Ok(ReduceOutput::End(state));
                         }
 
                         // If we have a certificate, then finish, otherwise continue.
@@ -1882,12 +1865,7 @@ where
                                 state.errors.push(err);
                                 state.bad_stake += weight;
                                 if state.bad_stake > validity {
-                                    debug!(
-                                        tx_digest = ?tx_digest,
-                                        bad_stake = state.bad_stake,
-                                        "Too many bad responses from validators cert processing, validity threshold exceeded."
-                                    );
-                                    return Err(SuiError::QuorumFailedToExecuteCertificate { errors: state.errors });
+                                    return Ok(ReduceOutput::End(state));
                                 }
                             }
                             _ => { unreachable!("SafeClient should have ruled out this case") }

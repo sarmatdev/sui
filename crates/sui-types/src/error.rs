@@ -114,7 +114,7 @@ pub enum SuiError {
     #[error("Invalid Authority Bitmap: {}", error)]
     InvalidAuthorityBitmap { error: String },
     #[error("Unexpected validator response from handle_transaction: {err}")]
-    UnexectedResultFromValidatorHandleTransaction { err: String },
+    UnexpectedResultFromValidatorHandleTransaction { err: String },
     #[error("Transaction certificate processing failed: {err}")]
     ErrorWhileProcessingCertificate { err: String },
     #[error(
@@ -387,12 +387,6 @@ pub enum SuiError {
     #[error("Failed to execute transaction locally by Orchestrator: {error:?}")]
     TransactionOrchestratorLocalExecutionError { error: String },
 
-    #[error(
-    "Failed to achieve quorum between authorities, cause by : {:#?}",
-    errors.iter().map(| e | ToString::to_string(&e)).collect::<Vec<String>>()
-    )]
-    QuorumNotReached { errors: Vec<SuiError> },
-
     // Errors returned by authority and client read API's
     #[error("Failure serializing object in the requested format: {:?}", error)]
     ObjectSerializationError { error: String },
@@ -556,8 +550,15 @@ impl From<&str> for SuiError {
 
 impl SuiError {
     pub fn indicates_epoch_change(&self) -> bool {
-        matches!(self, SuiError::ValidatorHaltedAtEpochEnd)
-            || matches!(self, SuiError::MissingCommitteeAtEpoch(_))
+        match self {
+            SuiError::QuorumFailedToProcessTransaction { errors }
+            | SuiError::QuorumFailedToExecuteCertificate { errors } => errors.iter().any(|err| {
+                matches!(err, SuiError::ValidatorHaltedAtEpochEnd)
+                    || matches!(self, SuiError::MissingCommitteeAtEpoch(_))
+            }),
+            SuiError::ValidatorHaltedAtEpochEnd | SuiError::MissingCommitteeAtEpoch(_) => true,
+            _ => false,
+        }
     }
 }
 
