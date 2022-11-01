@@ -7950,7 +7950,6 @@ dependencies = [
  "serde_with",
  "shell-words",
  "signature",
- "sui-bytecode-src-verifier",
  "sui-config",
  "sui-core",
  "sui-framework",
@@ -7962,6 +7961,7 @@ dependencies = [
  "sui-node",
  "sui-sdk",
  "sui-simulator",
+ "sui-source-validation",
  "sui-swarm",
  "sui-types",
  "telemetry-subscribers 0.2.0",
@@ -8051,27 +8051,6 @@ dependencies = [
  "tokio-util 0.7.4",
  "tracing",
  "tracing-subscriber 0.3.15",
- "workspace-hack",
-]
-
-[[package]]
-name = "sui-bytecode-src-verifier"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "clap 3.2.22",
- "move-binary-format",
- "move-bytecode-utils",
- "move-bytecode-verifier",
- "move-compiler",
- "move-core-types",
- "move-package",
- "move-symbol-pool",
- "sui-framework",
- "sui-framework-build",
- "sui-sdk",
- "sui-types",
- "tokio",
  "workspace-hack",
 ]
 
@@ -8630,6 +8609,27 @@ dependencies = [
  "sui-types",
  "telemetry-subscribers 0.2.0",
  "tracing",
+ "workspace-hack",
+]
+
+[[package]]
+name = "sui-source-validation"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap 3.2.22",
+ "move-binary-format",
+ "move-bytecode-utils",
+ "move-bytecode-verifier",
+ "move-compiler",
+ "move-core-types",
+ "move-package",
+ "move-symbol-pool",
+ "sui-framework",
+ "sui-framework-build",
+ "sui-sdk",
+ "sui-types",
+ "tokio",
  "workspace-hack",
 ]
 
