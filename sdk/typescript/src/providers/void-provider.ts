@@ -103,7 +103,7 @@ export class VoidProvider extends Provider {
     throw this.newError('getTransaction');
   }
 
-  async executeTransactionWithRequestType(
+  async executeTransaction(
     _txnBytes: string,
     _signatureScheme: SignatureScheme,
     _signature: string,

@@ -523,7 +523,7 @@ export class JsonRpcProvider extends Provider {
     }
   }
 
-  async executeTransactionWithRequestType(
+  async executeTransaction(
     txnBytes: string,
     signatureScheme: SignatureScheme,
     signature: string,
