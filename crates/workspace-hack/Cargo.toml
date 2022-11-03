@@ -628,7 +628,7 @@ x509-parser = { version = "0.14" }
 yaml-rust = { version = "0.4", default-features = false }
 yansi = { version = "0.5", default-features = false }
 yasna = { version = "0.5", features = ["std", "time"] }
-ying-profiler = { git = "https://github.com/velvia/ying-profiler", default-features = false, features = ["profile-spans", "tracing"] }
+ying-profiler = { git = "https://github.com/velvia/ying-profiler", default-features = false }
 zeroize = { version = "1", features = ["alloc", "zeroize_derive"] }
 zstd-sys = { version = "2", features = ["legacy", "zdict_builder"] }
 
@@ -1357,7 +1357,7 @@ x509-parser = { version = "0.14" }
 yaml-rust = { version = "0.4", default-features = false }
 yansi = { version = "0.5", default-features = false }
 yasna = { version = "0.5", features = ["std", "time"] }
-ying-profiler = { git = "https://github.com/velvia/ying-profiler", default-features = false, features = ["profile-spans", "tracing"] }
+ying-profiler = { git = "https://github.com/velvia/ying-profiler", default-features = false }
 zeroize = { version = "1", features = ["alloc", "zeroize_derive"] }
 zeroize_derive = { version = "1", default-features = false }
 zstd-sys = { version = "2", features = ["legacy", "zdict_builder"] }
